@@ -20,7 +20,7 @@ class MAABase(ABC):
                  cross_finetune_epochs: int = 5,
                  device = None,
                  seed=None,
-                 ckpt_path="auto",):
+                 ckpt_path="latest",):
         """
         Initialize necessary hyperparameters.
 
@@ -54,6 +54,7 @@ class MAABase(ABC):
         self.device = setup_device(device)
         print("Running Device:", self.device)
 
+        print("output_dir:", self.output_dir)
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
             print("Output directory created! ")

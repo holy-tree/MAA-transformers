@@ -149,8 +149,10 @@ def plot_mse_loss(hist_MSE_G, hist_val_loss, num_epochs,
     plt.figure(figsize=(5 * N, 4))
 
     for i, (MSE, val_loss) in enumerate(zip(hist_MSE_G, hist_val_loss)):
-        plt.plot(range(num_epochs), MSE, label=f"Train MSE G{i + 1}", linewidth=2)
-        plt.plot(range(num_epochs), val_loss, label=f"Val MSE G{i + 1}", linewidth=2, linestyle="--")
+        # plt.plot(range(num_epochs), MSE, label=f"Train MSE G{i + 1}", linewidth=2)
+        # plt.plot(range(num_epochs), val_loss, label=f"Val MSE G{i + 1}", linewidth=2, linestyle="--")
+        plt.plot(range(len(MSE)), MSE, label=f"Train MSE G{i + 1}", linewidth=2)
+        plt.plot(range(len(val_loss)), val_loss, label=f"Val MSE G{i + 1}", linewidth=2, linestyle="--")
 
     plt.title("MSE Loss for Generators (Train vs Validation)", fontsize=16)
     plt.xlabel("Epoch", fontsize=14)

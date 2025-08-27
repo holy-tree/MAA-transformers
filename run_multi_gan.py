@@ -4,7 +4,6 @@ import pandas as pd
 import os
 import models
 from utils.logger import setup_experiment_logging
-import logging
 
 # 更新 name_map，添加新的合约代码和对应的标准名称
 name_map = {
@@ -130,10 +129,11 @@ if __name__ == "__main__":
                         help="The symbol of the data to be processed, e.g., 'rb9999'")
     parser.add_argument('--freq', type=str, choices=['daily', '1min'], required=False,
                         help="Data frequency: 'daily' or '1min'")
-    parser.add_argument('--data_path', type=str, required=False,
+    parser.add_argument('--data_path', type=str, required=False,default=f"./data/raw_data/ag9999_1min_data.csv",
                         help="Path to the input data file. This argument is an alternative to --symbol and --freq")
 
-    parser.add_argument('--output_dir', type=str, required=False, help="Directory to save the output")
+    parser.add_argument('--output_dir', type=str, required=False,default=f"./results/output/ag9999_1min_data",
+                        help="Directory to save the output")
 
     parser.add_argument('--ERM', type=bool, help="whether to do use discriminator", default=False)
     parser.add_argument('--feature_columns', nargs='+', type=int, help="features choosed to be used as input",
@@ -149,14 +149,16 @@ if __name__ == "__main__":
     parser.add_argument('--num_classes', "-n_cls", type=int,
                         help="numbers of class in classifier head, e.g. 0 par/1 rise/2 fall", default=3)
     parser.add_argument('--generator_names', "-gens", nargs='+', type=str, help="names of generators",
-                        default=["gru", "lstm", "transformer"])
+                        # default=["gru", "lstm", "transformer"]
+                        default=["itransformer","itransformer","itransformer"]
+                        )
     # default=["lstm"])
     parser.add_argument('--discriminators', "-discs", type=list, help="names of discriminators", default=None)
     parser.add_argument('--distill_epochs', type=int, help="Epochs to do distillation", default=1)
     parser.add_argument('--cross_finetune_epochs', type=int, help="Epochs to do distillation", default=5)
-    parser.add_argument('--device', type=list, help="Device sets", default=[0])
+    parser.add_argument('--device', nargs='+', type=int, help="Device sets", default=[0])
 
-    parser.add_argument('--num_epochs', type=int, help="epoch", default=1)
+    parser.add_argument('--num_epochs', type=int, help="epoch", default=15)
     parser.add_argument('--lr', type=int, help="initial learning rate", default=2e-5)
     parser.add_argument('--batch_size', type=int, help="Batch size for training", default=64)
     parser.add_argument('--train_split', type=float, help="Train-test split ratio", default=0.7)
@@ -171,14 +173,34 @@ if __name__ == "__main__":
     parser.add_argument('--mode', type=str, choices=["pred", "train"],
                         help="If train, it will also pred, while it predicts, it will laod the model checkpoint saved before.",
                         default="train")
-    parser.add_argument("--ckpt_path", type=str, help="Checkpoint path", default="latest")
+    parser.add_argument("--ckpt_path", type=str, help="Checkpoint path", default="./results/output")
+
+    # for itransformer
+    parser.add_argument('--output_len', type=int, default=4, help='prediction length of iTransformer')
+    parser.add_argument('--seq_len', type=int, default=15, help='input sequence length of iTransformer')
+    parser.add_argument('--pred_len', type=int, default=4, help='prediction sequence length of iTransformer')
+    parser.add_argument('--d_model', type=int, default=512, help='dimension of model for iTransformer')
+    parser.add_argument('--n_heads', type=int, default=8, help='num of heads for iTransformer')
+    parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn for iTransformer')
+    parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers for iTransformer')
+    parser.add_argument('--dropout', type=float, default=0.05, help='dropout rate for iTransformer')
+    parser.add_argument('--embed', type=str, default='timeF', choices=['timeF', 'fixed', 'learned'],
+                        help='time features embedding type')
+    parser.add_argument('--fre_itrans', type=str, default='h', help='freq for time features encoding')
+    parser.add_argument('--activation', type=str, default='gelu', help='activation function for iTransformer')
+    parser.add_argument('--factor', type=int, default=1, help='attn factor for iTransformer')
+    parser.add_argument('--output_attention', action='store_true', help='whether to output attention for iTransformer')
+    parser.add_argument('--use_norm', type=bool, default=True, help='whether to use normalization for iTransformer')
+    # run_multi_gan.py
+    parser.add_argument('--class_strategy', type=str, default='no-class',
+                        help='classification strategy for iTransformer')
 
     args = parser.parse_args()
 
     # 动态构建 data_path 和 output_dir
     if args.symbol and args.freq:
-        args.data_path = f"../data/raw_data/{args.symbol}_{args.freq}_data.csv"
-        args.output_dir = f"../results/output/{args.symbol}_{args.freq}_data"
+        args.data_path = f"./data/raw_data/ag9999_1min_data.csv"
+        args.output_dir = f"./results/output/ag9999_1min_data"
 
     # 检查 data_path 是否存在
     if not args.data_path:

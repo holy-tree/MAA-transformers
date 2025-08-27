@@ -12,8 +12,7 @@ import logging  # NEW
 from utils.util import get_autocast_context
 from torch.cuda.amp import GradScaler
 
-scaler = GradScaler()
-
+scaler = torch.amp.GradScaler('cuda')
 
 def train_multi_gan(args,
                     generators, discriminators,
@@ -107,6 +106,11 @@ def train_multi_gan(args,
     target_num = train_y.shape[-1]
 
     print("start training")
+    if torch.cuda.is_available():
+        print("GPU is available. The current device is:", torch.cuda.get_device_name(0))
+    else:
+        print("GPU is not available. Using CPU.")
+
     for epoch in range(num_epochs):
         epo_start = time.time()
 
@@ -370,14 +374,23 @@ def train_multi_gan(args,
     data_G = [[[] for _ in range(4)] for _ in range(N)]
     data_D = [[[] for _ in range(4)] for _ in range(N)]
 
+    # for i in range(N):
+    #     for j in range(N + 1):
+    #         if j < N:
+    #             data_G[i][j] = hists_dict[f"D{j + 1}_G{i + 1}"][:epoch]
+    #             data_D[i][j] = hists_dict[f"D{i + 1}_G{j + 1}"][:epoch]
+    #         elif j == N:
+    #             data_G[i][j] = hists_dict[g_keys[i]][:epoch]
+    #             data_D[i][j] = hists_dict[d_keys[i]][:epoch]
     for i in range(N):
         for j in range(N + 1):
             if j < N:
-                data_G[i][j] = hists_dict[f"D{j + 1}_G{i + 1}"][:epoch]
-                data_D[i][j] = hists_dict[f"D{i + 1}_G{j + 1}"][:epoch]
+                # 修正：使用切片 [:epoch + 1] 以包含当前 epoch 的数据
+                data_G[i][j] = hists_dict[f"D{j + 1}_G{i + 1}"][:epoch + 1]
+                data_D[i][j] = hists_dict[f"D{i + 1}_G{j + 1}"][:epoch + 1]
             elif j == N:
-                data_G[i][j] = hists_dict[g_keys[i]][:epoch]
-                data_D[i][j] = hists_dict[d_keys[i]][:epoch]
+                data_G[i][j] = hists_dict[g_keys[i]][:epoch + 1]
+                data_D[i][j] = hists_dict[d_keys[i]][:epoch + 1]
 
     plot_generator_losses(data_G, output_dir)
     plot_discriminator_losses(data_D, output_dir)
@@ -385,11 +398,16 @@ def train_multi_gan(args,
     # overall G&D
     visualize_overall_loss([data_G[i][N] for i in range(N)], [data_D[i][N] for i in range(N)], output_dir)
 
+    # hist_MSE_G = [[] for _ in range(N)]
+    # hist_val_loss = [[] for _ in range(N)]
+    # for i in range(N):
+    #     hist_MSE_G[i] = hists_dict[f"MSE_G{i + 1}"][:epoch]
+    #     hist_val_loss[i] = hists_dict[f"val_G{i + 1}"][:epoch]
     hist_MSE_G = [[] for _ in range(N)]
     hist_val_loss = [[] for _ in range(N)]
     for i in range(N):
-        hist_MSE_G[i] = hists_dict[f"MSE_G{i + 1}"][:epoch]
-        hist_val_loss[i] = hists_dict[f"val_G{i + 1}"][:epoch]
+        hist_MSE_G[i] = hists_dict[f"MSE_G{i + 1}"][:epoch + 1]
+        hist_val_loss[i] = hists_dict[f"val_G{i + 1}"][:epoch + 1]
 
     plot_mse_loss(hist_MSE_G, hist_val_loss, epoch, output_dir)
 
@@ -433,34 +451,6 @@ def discriminate_fake(args, X, Y, LABELS,
 
         lossD_real = [criterion(dis_real_output, real_label) for (dis_real_output, real_label) in
                       zip(dis_real_outputs, real_labels)]
-
-    # fake_cls_temp_G = [None] * N
-    # if mode == "train_D":
-    #     # G1生成的数据
-    #     fake_data_temp_G = [fake_data.detach() for fake_data in fake_data_G]
-    #     # 拼接之后可以让生成的假数据，既包含假数据又包含真数据，
-    #     fake_data_temp_G = [torch.cat([label[:, :window_size, :], fake_data.reshape(-1, 1, target_num)], axis=1)
-    #                         for (label, window_size, fake_data) in zip(Y, window_sizes, fake_data_temp_G)]
-    #     # G1生成的cls logits
-    #     # fake_cls_temp_G = [fake_logits.detach() for fake_logits in fake_cls_G]
-    #     # # 拼接之后可以让生成的假数据，既包含假数据又包含真数据，
-    #     # fake_cls_temp_G = [torch.cat([label[:, :window_size, :], fake_cls.reshape(-1, 1, target_num)], axis=1)
-    #     #                    for (label, window_size, fake_cls) in zip(Y, window_sizes, fake_cls_temp_G)]
-    #     fake_cls_temp_G = [fake_cls.detach() for fake_cls in fake_cls_G]
-    #     fake_cls_temp_G = [torch.cat([label[:, :window_size, :], fake_cls.unsqueeze(-1).unsqueeze(1)], axis=1)
-    #                 for (label, window_size, fake_cls) in zip(LABELS, window_sizes, fake_cls_temp_G)]
-
-    # elif mode == "train_G":
-    #     # 拼接之后可以让生成的假数据，既包含假数据又包含真数据，
-    #     # fake_data_temp_G = [torch.cat([y[:, :window_size, :], fake_data.reshape(-1, 1, target_num)], axis=1)
-    #     #                     for (y, window_size, fake_data) in zip(Y, window_sizes, fake_data_G)]
-    #     # fake_cls_temp_G = [torch.cat([label[:, :window_size, :], fake_cls.reshape(-1, 1, target_num)], axis=1)
-    #     #                    for (label, window_size, fake_cls) in zip(LABELS, window_sizes, fake_cls_G)]
-    #     fake_data_temp_G = [torch.cat([y[:, :window_size, :], fake_data.reshape(-1, 1, target_num)], axis=1)
-    #                     for (y, window_size, fake_data) in zip(Y, window_sizes, fake_data_G)]
-
-    #     fake_cls_temp_G = [torch.cat([label[:, :window_size, :], fake_cls.unsqueeze(-1).unsqueeze(1)], axis=1)
-    #                 for (label, window_size, fake_cls) in zip(LABELS, window_sizes, fake_cls_temp_G)]
 
     if mode == "train_D":
         fake_data_temp_G = [fake_data.detach() for fake_data in fake_data_G]
@@ -536,16 +526,6 @@ def discriminate_fake(args, X, Y, LABELS,
                           zip(fake_data_G, Y)]
             loss_matrix = loss_mse_G
             loss_DorG = loss_DorG + torch.stack(loss_matrix).to(device)
-            # ---------------- 添加分类损失 -----------------
-            # 针对每个生成器的分类分支计算交叉熵损失
-            # LABELS 作为真实标签传入（假设其 shape 与 fake_data_cls[i] 第一维度匹配）
-            cls_losses = [F.cross_entropy(fake_cls, l[:, -1, :].squeeze()) for (fake_cls, l) in
-                          zip(fake_logits_G, LABELS)]
-            # 可以取平均或者加总（此处取平均）
-            classification_loss = torch.stack(cls_losses)
-            # 合并生成器的 loss：原始 loss 与分类 loss 相加
-            loss_DorG = loss_DorG + classification_loss
-            # --------------------------------------------------
 
     return loss_DorG, loss_matrix
 

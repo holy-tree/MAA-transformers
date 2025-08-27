@@ -2,9 +2,10 @@ import torch
 import torch.nn as nn
 import numpy as np
 from math import sqrt
-from utils.masking import TriangularCausalMask, ProbMask
 from reformer_pytorch import LSHSelfAttention
 from einops import rearrange
+
+from models.itransformer.utils.masking import TriangularCausalMask, ProbMask
 
 
 # Code implementation from https://github.com/thuml/Flowformer

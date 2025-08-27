@@ -1,3 +1,4 @@
+from argparse import Namespace
 from MAA_base import MAABase
 import torch
 import numpy as np
@@ -90,14 +91,15 @@ class MAA_time_series(MAABase):
         """
         super().__init__(N_pairs, batch_size, num_epochs,
                          generator_names, discriminators_names,
+                         ckpt_path,
                          output_dir,
                          initial_learning_rate,
                          train_split,
                          precise,
                          do_distill_epochs, cross_finetune_epochs,
                          device,
-                         seed,
-                         ckpt_path)  # 调用父类初始化
+                         seed
+                         )  # 调用父类初始化
 
         self.args = args
         self.window_sizes = window_sizes
@@ -309,7 +311,26 @@ class MAA_time_series(MAABase):
 
             # 初始化生成器
             GenClass = self.generator_dict[name]
-            if "transformer" in name:
+            if "itransformer" in name:
+                itransformer_configs = Namespace(
+                    seq_len=self.window_sizes[i],
+                    pred_len=self.args.output_len,  # 需要在run_multi_gan.py中添加
+                    d_model=self.args.d_model,
+                    embed=self.args.embed,
+                    freq=self.args.fre_itrans,
+                    dropout=self.args.dropout,
+                    n_heads=self.args.n_heads,
+                    d_ff=self.args.d_ff,
+                    activation=self.args.activation,
+                    e_layers=self.args.e_layers,
+                    factor=self.args.factor,
+                    output_attention=self.args.output_attention,
+                    use_norm=self.args.use_norm,
+                    class_strategy=self.args.class_strategy,
+                    num_classes=self.args.num_classes,
+                )
+                gen_model = GenClass(itransformer_configs).to(self.device)
+            elif "transformer" in name:
                 gen_model = GenClass(x.shape[-1], output_len=4).to(self.device)
             else:
                 gen_model = GenClass(x.shape[-1], 4).to(self.device)
