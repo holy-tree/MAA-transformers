@@ -150,7 +150,7 @@ if __name__ == "__main__":
                         help="numbers of class in classifier head, e.g. 0 par/1 rise/2 fall", default=3)
     parser.add_argument('--generator_names', "-gens", nargs='+', type=str, help="names of generators",
                         # default=["gru", "lstm", "transformer"]
-                        default=["itransformer","itransformer","itransformer"]
+                        default=["ptransformer","ptransformer","ptransformer"]
                         )
     # default=["lstm"])
     parser.add_argument('--discriminators', "-discs", type=list, help="names of discriminators", default=None)
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument('--cross_finetune_epochs', type=int, help="Epochs to do distillation", default=5)
     parser.add_argument('--device', nargs='+', type=int, help="Device sets", default=[0])
 
-    parser.add_argument('--num_epochs', type=int, help="epoch", default=15)
+    parser.add_argument('--num_epochs', type=int, help="epoch", default=1)
     parser.add_argument('--lr', type=int, help="initial learning rate", default=2e-5)
     parser.add_argument('--batch_size', type=int, help="Batch size for training", default=64)
     parser.add_argument('--train_split', type=float, help="Train-test split ratio", default=0.7)

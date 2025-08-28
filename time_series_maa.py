@@ -330,6 +330,35 @@ class MAA_time_series(MAABase):
                     num_classes=self.args.num_classes,
                 )
                 gen_model = GenClass(itransformer_configs).to(self.device)
+            elif name == 'ptransformer':
+                # print(end_timestamp - start_timestamp +1)
+                window_size = self.window_sizes[i]
+                gen_model = GenClass(input_dim=x.shape[-1], seq_len=window_size).to(self.device)
+            elif "fits" in name:
+                # 硬编码所有 FITS 模型的配置
+                current_seq_len = self.window_sizes[i]
+                calculated_cut_freq = current_seq_len // 2
+                fits_configs = Namespace(
+                    seq_len=self.window_sizes[i],  # 例如，硬编码输入序列长度
+                    pred_len=self.args.output_len,  # 例如，硬编码预测长度
+                    enc_in=12,  # 硬编码为 OHLC 的4个通道
+                    d_model=512,  # 例如，硬编码模型维度
+                    embed='fixed',  # 例如，硬编码嵌入类型
+                    freq='m',  # 例如，硬编码频率
+                    dropout=0.05,  # 例如，硬编码 dropout
+                    n_heads=8,  # 例如，硬编码注意力头数
+                    d_ff=2048,  # 例如，硬编码前馈网络维度
+                    activation='gelu',  # 例如，硬编码激活函数
+                    e_layers=2,  # 例如，硬编码编码器层数
+                    factor=1,  # 例如，硬编码 factor
+                    output_attention=False,  # 例如，硬编码是否输出注意力
+                    individual=False,
+                    use_norm=True,  # 例如，硬编码是否使用归一化
+                    class_strategy='prob',  # 例如，硬编码分类策略
+                    num_classes=3,  # 硬编码分类类别数量
+                    cut_freq=calculated_cut_freq,  # 硬编码截止频率
+                )
+                gen_model = GenClass(fits_configs).to(self.device)
             elif "transformer" in name:
                 gen_model = GenClass(x.shape[-1], output_len=4).to(self.device)
             else:
