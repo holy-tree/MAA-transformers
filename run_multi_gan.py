@@ -150,7 +150,7 @@ if __name__ == "__main__":
                         help="numbers of class in classifier head, e.g. 0 par/1 rise/2 fall", default=3)
     parser.add_argument('--generator_names', "-gens", nargs='+', type=str, help="names of generators",
                         # default=["gru", "lstm", "transformer"]
-                        default=["ptransformer","ptransformer","ptransformer"]
+                        default=["fits","fits","fits"]
                         )
     # default=["lstm"])
     parser.add_argument('--discriminators', "-discs", type=list, help="names of discriminators", default=None)

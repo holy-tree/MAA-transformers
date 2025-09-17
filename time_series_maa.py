@@ -1,4 +1,7 @@
 from argparse import Namespace
+
+import joblib
+
 from MAA_base import MAABase
 import torch
 import numpy as np
@@ -337,7 +340,7 @@ class MAA_time_series(MAABase):
             elif "fits" in name:
                 # 硬编码所有 FITS 模型的配置
                 current_seq_len = self.window_sizes[i]
-                calculated_cut_freq = current_seq_len // 2
+                calculated_cut_freq = current_seq_len // 2+1
                 fits_configs = Namespace(
                     seq_len=self.window_sizes[i],  # 例如，硬编码输入序列长度
                     pred_len=self.args.output_len,  # 例如，硬编码预测长度
@@ -433,8 +436,10 @@ class MAA_time_series(MAABase):
         ckpt_dir = os.path.join(self.ckpt_dir, timestamp)
         gen_dir = os.path.join(ckpt_dir, "generators")
         disc_dir = os.path.join(ckpt_dir, "discriminators")
+        scaler_dir = os.path.join(ckpt_dir, "scalers")
         os.makedirs(gen_dir, exist_ok=True)
         os.makedirs(disc_dir, exist_ok=True)
+        os.makedirs(scaler_dir, exist_ok=True)
 
         # 加载模型并设为 eval
         for i in range(self.N):
@@ -451,6 +456,12 @@ class MAA_time_series(MAABase):
             save_path = os.path.join(disc_dir, f"{i + 1}_{disc_name}.pt")
             torch.save(disc.state_dict(), save_path)
 
+        # 新增：保存归一化器
+        # 保存 y_scaler
+        joblib.dump(self.y_scaler, os.path.join(scaler_dir, "y_scaler.joblib"))
+        # 保存 x_scalers 列表
+        for i, x_scaler in enumerate(self.x_scalers):
+            joblib.dump(x_scaler, os.path.join(scaler_dir, f"x_scaler_{i + 1}.joblib"))
         print("All models saved with timestamp and identifier.")
 
     def get_latest_ckpt_folder(self):
@@ -562,6 +573,14 @@ class MAA_time_series(MAABase):
         print("Start predicting with all generators..")
         best_model_state = [None for _ in range(self.N)]
         current_path = os.path.join(self.ckpt_path, "generators")
+        current_scaler_path = os.path.join(self.ckpt_path, "scalers")
+
+        self.y_scaler = joblib.load(os.path.join(current_scaler_path, "y_scaler.joblib"))
+        self.x_scalers = []
+        num_x_scalers = len(glob.glob(os.path.join(current_scaler_path, "x_scaler_*.joblib")))
+        for i in range(num_x_scalers):
+            x_scaler = joblib.load(os.path.join(current_scaler_path, f"x_scaler_{i + 1}.joblib"))
+            self.x_scalers.append(x_scaler)
 
         for i, gen in enumerate(self.generators):
             gen_name = type(gen).__name__
